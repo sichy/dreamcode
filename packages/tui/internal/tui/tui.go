@@ -956,10 +956,10 @@ func (a Model) home() (string, int, int) {
 	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
 	highlight := styles.NewStyle().Foreground(t.Accent()).Background(t.Background()).Render
 
-	open := `
-█▀▀█ █▀▀█ █▀▀ █▀▀▄ 
-█░░█ █░░█ █▀▀ █░░█ 
-▀▀▀▀ █▀▀▀ ▀▀▀ ▀  ▀ `
+	dream := `
+█▀▀▄ █▀▀█ █▀▀ █▀▀█ █▄░▄█
+█░░█ █▄▄▀ █▀▀ █▄▄█ █░█░█
+▀▀▀  ▀░▀▀ ▀▀▀ ▀░░▀ ▀░░░▀`
 	code := `
 █▀▀ █▀▀█ █▀▀▄ █▀▀
 █░░ █░░█ █░░█ █▀▀
@@ -967,7 +967,7 @@ func (a Model) home() (string, int, int) {
 
 	logo := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		muted(open),
+		muted(dream),
 		base(code),
 	)
 	// cwd := app.Info.Path.Cwd

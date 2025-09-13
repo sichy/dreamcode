@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"sync"
 
+	tea "github.com/charmbracelet/bubbletea/v2"
 	opencode "github.com/sst/opencode-sdk-go"
 )
 
@@ -19,9 +20,71 @@ func sanitizeValue(val any) any {
 		return err.Error()
 	}
 
+	// Check if this implements tea.Model interface directly
+	if _, ok := val.(tea.Model); ok {
+		return fmt.Sprintf("<%T>", val)
+	}
+
 	v := reflect.ValueOf(val)
-	if v.Kind() == reflect.Interface && !v.IsNil() {
-		return fmt.Sprintf("%T", val)
+	switch v.Kind() {
+	case reflect.Interface:
+		if !v.IsNil() {
+			// Recursively sanitize the underlying value
+			return sanitizeValue(v.Interface())
+		}
+		return nil
+	case reflect.Func:
+		// Functions can't be serialized, return a placeholder
+		return "<function>"
+	case reflect.Chan:
+		// Channels can't be serialized, return a placeholder
+		return "<channel>"
+	case reflect.Map:
+		// Recursively sanitize map values
+		result := make(map[string]any)
+		iter := v.MapRange()
+		for iter.Next() {
+			key := fmt.Sprintf("%v", iter.Key().Interface())
+			result[key] = sanitizeValue(iter.Value().Interface())
+		}
+		return result
+	case reflect.Slice, reflect.Array:
+		// Recursively sanitize slice/array elements
+		result := make([]any, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			result[i] = sanitizeValue(v.Index(i).Interface())
+		}
+		return result
+	case reflect.Struct:
+		// Check if this is a type that implements tea.Model or other problematic interfaces
+		valType := v.Type()
+		// If the struct has methods that make it a tea.Model, sanitize it
+		if valType.NumMethod() > 0 {
+			// Check if this might be a tea.Model (has Init, Update, View methods)
+			hasInit := false
+			hasUpdate := false
+			hasView := false
+			for i := 0; i < valType.NumMethod(); i++ {
+				methodName := valType.Method(i).Name
+				if methodName == "Init" {
+					hasInit = true
+				} else if methodName == "Update" {
+					hasUpdate = true
+				} else if methodName == "View" {
+					hasView = true
+				}
+			}
+			if hasInit && hasUpdate && hasView {
+				// This is likely a tea.Model, return type name instead
+				return fmt.Sprintf("<%T>", val)
+			}
+		}
+	case reflect.Ptr:
+		if !v.IsNil() {
+			// Recursively sanitize pointer value
+			return sanitizeValue(v.Elem().Interface())
+		}
+		return nil
 	}
 
 	return val
