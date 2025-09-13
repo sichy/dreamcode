@@ -804,7 +804,7 @@ func renderToolTitle(
 	width int,
 ) string {
 	if toolCall.State.Status == opencode.ToolPartStateStatusPending {
-		title := renderToolAction(toolCall.Tool)
+		title := util.RenderSpinner() + " " + renderToolAction(toolCall.Tool)
 		t := theme.CurrentTheme()
 		shiny := util.Shimmer(title, t.BackgroundPanel(), t.TextMuted(), t.Accent())
 		return styles.NewStyle().Background(t.BackgroundPanel()).Width(width - 6).Render(shiny)
@@ -831,7 +831,10 @@ func renderToolTitle(
 		}
 	}
 
-	title := renderToolName(toolCall.Tool)
+	// Add icon to tool name
+	icon := util.GetToolIcon(toolCall.Tool)
+	title := icon + " " + renderToolName(toolCall.Tool)
+	
 	switch toolCall.Tool {
 	case "read":
 		toolArgs = renderArgs(&toolArgsMap, "filePath")
@@ -856,22 +859,26 @@ func renderToolTitle(
 		toolArgs = renderArgs(&toolArgsMap, "url")
 		title = fmt.Sprintf("%s %s", title, toolArgs)
 	case "todowrite":
-		title = getTodoTitle(toolCall)
+		title = util.IconSquare + " " + getTodoTitle(toolCall)
 	case "todoread":
-		return "Plan"
+		return util.IconSquare + " Plan"
 	case "invalid":
 		if actualTool, ok := toolArgsMap["tool"].(string); ok {
-			title = renderToolName(actualTool)
+			title = util.GetToolIcon(actualTool) + " " + renderToolName(actualTool)
 		}
 	default:
 		toolName := renderToolName(toolCall.Tool)
-		title = fmt.Sprintf("%s %s", toolName, toolArgs)
+		title = fmt.Sprintf("%s %s %s", icon, toolName, toolArgs)
 	}
 
 	title = truncate.StringWithTail(title, uint(width-6), "...")
+	
+	// Add status indicator
+	t := theme.CurrentTheme()
 	if toolCall.State.Error != "" {
-		t := theme.CurrentTheme()
-		title = styles.NewStyle().Foreground(t.Error()).Render(title)
+		title = util.IconError + " " + styles.NewStyle().Foreground(t.Error()).Render(title)
+	} else if toolCall.State.Status == opencode.ToolPartStateStatusCompleted {
+		title = util.IconSuccess + " " + styles.NewStyle().Foreground(t.Success()).Render(title)
 	}
 	return title
 }
