@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/v2/key"
+	"github.com/charmbracelet/lipgloss/v2"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/sst/opencode-sdk-go"
 	"github.com/sst/opencode/internal/app"
+	"github.com/sst/opencode/internal/components/core"
 	"github.com/sst/opencode/internal/components/list"
 	"github.com/sst/opencode/internal/components/modal"
 	"github.com/sst/opencode/internal/layout"
@@ -20,10 +22,10 @@ import (
 )
 
 const (
-	numVisibleModels = 10
-	minDialogWidth   = 40
-	maxDialogWidth   = 80
-	maxRecentModels  = 5
+	numVisibleModels = 15
+	minDialogWidth   = 70
+	maxDialogWidth   = 120
+	maxRecentModels  = 8
 )
 
 // ModelDialog interface for the model selection dialog
@@ -71,12 +73,13 @@ func (m modelItem) Render(
 		Background(t.BackgroundPanel())
 
 	modelPart := itemStyle.Render(m.model.Model.Name)
-	providerPart := providerStyle.Render(fmt.Sprintf(" %s", m.model.Provider.Name))
+	providerPart := providerStyle.Render(fmt.Sprintf(" • %s", m.model.Provider.Name))
 
 	combinedText := modelPart + providerPart
 	return baseStyle.
 		Background(t.BackgroundPanel()).
-		PaddingLeft(1).
+		PaddingLeft(2).
+		PaddingRight(1).
 		Render(combinedText)
 }
 
@@ -153,7 +156,37 @@ func (m *modelDialog) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelDialog) View() string {
-	return m.searchDialog.View()
+	t := theme.CurrentTheme()
+	m.searchDialog.SetWidth(m.dialogWidth)
+	
+	// Create the beautiful header with title and slash pattern like Commands dialog
+	headerTitle := "Select Model"
+	headerWithPattern := core.Title(headerTitle, m.dialogWidth-4)
+	headerView := styles.NewStyle().
+		Padding(0, 1, 1, 1).
+		Background(t.BackgroundElement()).
+		Render(headerWithPattern)
+	
+	// Get search dialog content without its own styling
+	searchContent := m.searchDialog.View()
+	
+	// Combine header and content
+	combinedContent := headerView + "\n" + searchContent + "\n"
+	
+	// Apply the same styling as completion dialog
+	return styles.NewStyle().
+		Padding(0, 1).
+		Foreground(t.Text()).
+		Background(t.BackgroundElement()).
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderLeft(true).
+		BorderRight(true).
+		BorderTop(true).
+		BorderBottom(true).
+		BorderForeground(t.Border()).
+		BorderBackground(t.Background()).
+		Width(m.dialogWidth).
+		Render(combinedContent)
 }
 
 func (m *modelDialog) calculateOptimalWidth(models []ModelWithProvider) int {
@@ -450,7 +483,9 @@ func NewModelDialog(app *app.App) ModelDialog {
 
 	dialog.modal = modal.New(
 		modal.WithTitle("Select Model"),
-		modal.WithMaxWidth(dialog.dialogWidth+4),
+		modal.WithMaxWidth(dialog.dialogWidth+8),
+		modal.WithFitContent(false),
+		modal.WithHeaderPattern(),
 	)
 
 	return dialog

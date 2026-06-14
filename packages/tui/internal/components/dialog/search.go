@@ -213,7 +213,7 @@ func (s *SearchDialog) View() string {
 	listView := s.list.View()
 	listView = lipgloss.PlaceVertical(s.list.GetMaxVisibleHeight(), lipgloss.Top, listView)
 	textinput := s.textInput.View()
-	return textinput + "\n\n" + listView
+	return textinput + "\n\n" + listView + "\n"
 }
 
 // SetWidth sets the width of the search dialog

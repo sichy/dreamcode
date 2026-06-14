@@ -5,10 +5,12 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/v2/key"
+	"github.com/charmbracelet/lipgloss/v2"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/sst/opencode-sdk-go"
 	"github.com/sst/opencode/internal/app"
+	"github.com/sst/opencode/internal/components/core"
 	"github.com/sst/opencode/internal/components/list"
 	"github.com/sst/opencode/internal/components/modal"
 	"github.com/sst/opencode/internal/layout"
@@ -18,11 +20,11 @@ import (
 )
 
 const (
-	numVisibleAgents     = 10
-	minAgentDialogWidth  = 40
-	maxAgentDialogWidth  = 60
-	maxDescriptionLength = 60
-	maxRecentAgents      = 5
+	numVisibleAgents     = 15
+	minAgentDialogWidth  = 70
+	maxAgentDialogWidth  = 100
+	maxDescriptionLength = 80
+	maxRecentAgents      = 8
 )
 
 // AgentDialog interface for the agent selection dialog
@@ -110,7 +112,8 @@ func (a agentSelectItem) Render(
 
 	return baseStyle.
 		Background(t.BackgroundPanel()).
-		PaddingLeft(1).
+		PaddingLeft(2).
+		PaddingRight(1).
 		Width(width).
 		Render(combinedText)
 }
@@ -192,7 +195,37 @@ func (a *agentDialog) SetSize(width, height int) {
 }
 
 func (a *agentDialog) View() string {
-	return a.searchDialog.View()
+	t := theme.CurrentTheme()
+	a.searchDialog.SetWidth(a.dialogWidth)
+	
+	// Create the beautiful header with title and slash pattern like Commands dialog
+	headerTitle := "Select Agent"
+	headerWithPattern := core.Title(headerTitle, a.dialogWidth-4)
+	headerView := styles.NewStyle().
+		Padding(0, 1, 1, 1).
+		Background(t.BackgroundElement()).
+		Render(headerWithPattern)
+	
+	// Get search dialog content without its own styling
+	searchContent := a.searchDialog.View()
+	
+	// Combine header and content
+	combinedContent := headerView + "\n" + searchContent + "\n"
+	
+	// Apply the same styling as completion dialog
+	return styles.NewStyle().
+		Padding(0, 1).
+		Foreground(t.Text()).
+		Background(t.BackgroundElement()).
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderLeft(true).
+		BorderRight(true).
+		BorderTop(true).
+		BorderBottom(true).
+		BorderForeground(t.Border()).
+		BorderBackground(t.Background()).
+		Width(a.dialogWidth).
+		Render(combinedContent)
 }
 
 func (a *agentDialog) calculateOptimalWidth(agents []agentSelectItem) int {
@@ -445,7 +478,9 @@ func NewAgentDialog(app *app.App) AgentDialog {
 
 	dialog.modal = modal.New(
 		modal.WithTitle("Select Agent"),
-		modal.WithMaxWidth(dialog.dialogWidth+4),
+		modal.WithMaxWidth(dialog.dialogWidth+8),
+		modal.WithFitContent(false),
+		modal.WithHeaderPattern(),
 	)
 
 	return dialog

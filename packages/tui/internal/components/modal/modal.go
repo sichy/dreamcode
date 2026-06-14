@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/sst/opencode/internal/components/core"
 	"github.com/sst/opencode/internal/layout"
 	"github.com/sst/opencode/internal/styles"
 	"github.com/sst/opencode/internal/theme"
@@ -14,12 +15,13 @@ type CloseModalMsg struct{}
 
 // Modal is a reusable modal component that handles frame rendering and overlay placement
 type Modal struct {
-	width      int
-	height     int
-	title      string
-	maxWidth   int
-	maxHeight  int
-	fitContent bool
+	width             int
+	height            int
+	title             string
+	maxWidth          int
+	maxHeight         int
+	fitContent        bool
+	showHeaderPattern bool
 }
 
 // ModalOption is a function that configures a Modal
@@ -50,6 +52,13 @@ func WithMaxHeight(height int) ModalOption {
 func WithFitContent(fit bool) ModalOption {
 	return func(m *Modal) {
 		m.fitContent = fit
+	}
+}
+
+// WithHeaderPattern adds a decorative pattern to the modal header
+func WithHeaderPattern() ModalOption {
+	return func(m *Modal) {
+		m.showHeaderPattern = true
 	}
 }
 
@@ -94,23 +103,33 @@ func (m *Modal) Render(contentView string, background string) string {
 
 	var finalContent string
 	if m.title != "" {
-		titleStyle := baseStyle.
-			Foreground(t.Text()).
-			Bold(true).
-			Padding(0, 1)
+		var headerLines []string
+		
+		// Use the beautiful Title function with gradient pattern
+		if m.showHeaderPattern {
+			titleWithPattern := core.Title(m.title, innerWidth-4)
+			headerLines = append(headerLines, baseStyle.Padding(0, 1).Render(titleWithPattern))
+		} else {
+			// Fallback to original title rendering
+			titleStyle := baseStyle.
+				Foreground(t.Text()).
+				Bold(true).
+				Padding(0, 1)
 
-		escStyle := baseStyle.Foreground(t.TextMuted())
-		escText := escStyle.Render("esc")
+			escStyle := baseStyle.Foreground(t.TextMuted())
+			escText := escStyle.Render("esc")
 
-		// Calculate position for esc text
-		titleWidth := lipgloss.Width(m.title)
-		escWidth := lipgloss.Width(escText)
-		spacesNeeded := max(0, innerWidth-titleWidth-escWidth-2)
-		spacer := strings.Repeat(" ", spacesNeeded)
-		titleLine := m.title + spacer + escText
-		titleLine = titleStyle.Render(titleLine)
+			// Calculate position for esc text
+			titleWidth := lipgloss.Width(m.title)
+			escWidth := lipgloss.Width(escText)
+			spacesNeeded := max(0, innerWidth-titleWidth-escWidth-2)
+			spacer := strings.Repeat(" ", spacesNeeded)
+			titleLine := m.title + spacer + escText
+			titleLine = titleStyle.Render(titleLine)
+			headerLines = append(headerLines, titleLine)
+		}
 
-		finalContent = strings.Join([]string{titleLine, "", contentView}, "\n")
+		finalContent = strings.Join(append(headerLines, "", contentView), "\n")
 	} else {
 		finalContent = contentView
 	}
